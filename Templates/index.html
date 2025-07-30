@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TrafficTelligence - Traffic Analysis</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background:#f0f2f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      margin-top: 30px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .card {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 5px solid #007bff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .card h3, .card h4 {
+      margin-top: 0;
+      color: #007bff;
+    }
+
+    .upload-area {
+      border: 2px dashed #007bff;
+      background-color: #eef5ff;
+      padding: 25px;
+      text-align: center;
+      border-radius: 10px;
+      margin-top: 30px;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #output p, #predictions p, #insights p {
+      margin: 6px 0;
+      font-size: 16px;
+    }
+
+    img {
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    }
+
+    input[type="file"] {
+      padding: 6px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .container {
+        margin: 10px;
+      }
+    }
+  </style>
+
+  <!-- JavaScript code remains unchanged -->
+  <script>
+    async function fetchData() {
+      const res = await fetch('/analyze');
+      const data = await res.json();
+      document.getElementById('output').innerHTML = `
+        <div class="grid">
+          <div class="card">
+            <h3>Current Analysis</h3>
+            <p><strong>Average Volume:</strong> ${data.average_volume}</p>
+            <p><strong>Peak Hour:</strong> ${data.peak_hour}</p>
+            <p><strong>Current Prediction:</strong> ${data.current_prediction} vehicles/hour</p>
+            <p><strong>Weather Impact:</strong> Clear: ${data.weather_impact.Clear || 'N/A'}, Rain: ${data.weather_impact.Rain || 'N/A'}</p>
+          </div>
+          <div class="card">
+            <h3>Real-time Status</h3>
+            <p><strong>Current Hour:</strong> ${data.current_hour}:00</p>
+            <p><strong>System:</strong> Active</p>
+            <p><strong>ML Model:</strong> Trained</p>
+          </div>
+        </div>
+      `;
+      document.getElementById('plot').src = '/plot?' + new Date().getTime();
+      loadPredictions();
+    }
+
+    async function loadPredictions() {
+      const res = await fetch('/predict');
+      const predictions = await res.json();
+      const html = predictions.slice(0, 6).map(p =>
+        `<p>${p.hour}: ${p.predicted_volume} vehicles</p>`
+      ).join('');
+      document.getElementById('predictions').innerHTML = html;
+
+      const insightsRes = await fetch('/insights');
+      const insights = await insightsRes.json();
+      document.getElementById('insights').innerHTML = `
+        <h4>Traffic Insights</h4>
+        <p><strong>Model Accuracy:</strong> ${insights.model_accuracy}%</p>
+        <p><strong>Best Travel Times:</strong> ${insights.optimal_times.best_travel_times.slice(0,3).join(', ')}</p>
+        <p><strong>Avoid Times:</strong> ${insights.optimal_times.avoid_times.slice(0,2).join(', ')}</p>
+      `;
+    }
+
+    async function uploadVideo() {
+      const fileInput = document.getElementById('videoFile');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('Please select a video file');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('video', file);
+
+      document.getElementById('uploadResult').innerHTML = 'Processing...';
+
+      try {
+        const res = await fetch('/upload_video', {
+          method: 'POST',
+          body: formData
+        });
+        const result = await res.json();
+
+        if (result.error) {
+          document.getElementById('uploadResult').innerHTML = `Error: ${result.error}`;
+        } else {
+          document.getElementById('uploadResult').innerHTML = `
+            <h4>Video Analysis Results:</h4>
+            <p><strong>Total Vehicles:</strong> ${result.total_vehicles}</p>
+            <p><strong>Duration:</strong> ${result.duration_minutes.toFixed(1)} minutes</p>
+            <p><strong>Traffic Rate:</strong> ${result.vehicles_per_minute.toFixed(1)} vehicles/minute</p>
+          `;
+        }
+      } catch (error) {
+        document.getElementById('uploadResult').innerHTML = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</head>
+<body onload="fetchData()">
+  <div class="container">
+   <h1>🚗 TrafficTelligence - Traffic Analysis</h1>
+
+
+    <div id="output"><p>Loading data...</p></div>
+
+    <div class="grid">
+      <div>
+        <h2>Traffic Volume Trends</h2>
+        <img src="https://www.mdpi.com/infrastructures/infrastructures-06-00038/article_deploy/html/images/infrastructures-06-00038-g001.png" alt="Traffic Volume Plot">
+      </div>
+      <div>
+        <h2>Traffic Volume Graph</h2>
+        <img src="https://www.mdpi.com/infrastructures/infrastructures-06-00038/article_deploy/html/images/infrastructures-06-00038-g008.png" alt="Traffic Volume">
+      </div>
+      
+    </div>
+
+    
+
+    <div class="upload-area">
+      <h3>📹 Upload Traffic Video for Analysis</h3>
+      <input type="file" id="videoFile" accept="video/*"><br><br>
+      <button onclick="uploadVideo()">Analyze Video</button>
+      <div id="uploadResult" style="margin-top: 15px;"></div>
+    </div>
+  </div>
+</body>
+</html>
